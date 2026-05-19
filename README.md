@@ -29,7 +29,7 @@ This internship focuses on building practical, real-world **Artificial Intellige
 * **Tech Stack:** *(e.g., Python, Spacy, NLTK, PyPDF2)*
 
 ### Task 2: Translator App
-* **Directory:** `TASK_2/` *(Coming Soon)*
+* **Directory:** `TASK_2/` 
 * **Description:** An AI-powered application designed for real-time translation, breaking down linguistic barriers and promoting global communication.
 * **Objective:** Deliver fast, accurate translation across multiple languages with an intuitive interface.
 * **Tech Stack:** *(e.g., Python, Streamlit, Hugging Face Transformers, Google Translate API)*
