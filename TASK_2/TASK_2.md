@@ -27,4 +27,4 @@ Developed by **Nishchal Soni** as part of **Task 2** for the **Pinnacle Labs Web
 
 1. **Clone or Download the Repository Assets:**
    ```bash
-   git clone [https://github.com/YOUR_GITHUB_USERNAME/pinnacle-labs-translator.git](https://github.com/YOUR_GITHUB_USERNAME/pinnacle-labs-translator.git)
+   git clone [https://github.com/nishchalsoni27/Pinnacle-Labs-Internship-Tasks-](https://github.com/nishchalsoni27/Pinnacle-Labs-Internship-Tasks-)
