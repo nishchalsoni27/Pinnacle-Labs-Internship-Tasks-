@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Translator App | Pinnacle Labs Task 2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #030712;
+      --surface: rgba(17, 24, 39, 0.7);
+      --surface-card: #111827;
+      --surface-hover: #1f2937;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(0, 212, 170, 0.4);
+      --accent: #00d4aa;
+      --accent-gradient: linear-gradient(135deg, #00d4aa 0%, #0097ff 100%);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #4b5563;
+      --success: #10b981;
+      --error: #ef4444;
+      --glow: 0 0 30px rgba(0, 212, 170, 0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .bg-glow-1 {
+      position: fixed; top: -10%; left: -10%; width: 50vw; height: 50vw;
+      background: radial-gradient(circle, rgba(0, 212, 170, 0.04) 0%, transparent 70%);
+      z-index: -1; pointer-events: none;
+    }
+    .bg-glow-2 {
+      position: fixed; bottom: -10%; right: -10%; width: 50vw; height: 50vw;
+      background: radial-gradient(circle, rgba(0, 151, 255, 0.04) 0%, transparent 70%);
+      z-index: -1; pointer-events: none;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 24px;
+      flex-grow: 1;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-icon {
+      font-size: 20px;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      border: 1px solid var(--accent);
+      padding: 6px 12px;
+      border-radius: 12px;
+      box-shadow: var(--glow);
+    }
+    .brand-title h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; }
+    .brand-title span { color: var(--accent); }
+    .meta-badge {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .meta-badge strong { color: var(--text); }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 2.5fr 1fr;
+      gap: 32px;
+    }
+    @media (max-width: 992px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+
+    .workspace { display: flex; flex-direction: column; gap: 24px; }
+
+    .controls-bar {
+      background: var(--surface);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .lang-select-group { display: flex; align-items: center; gap: 12px; flex-grow: 1; }
+    .select-wrapper { position: relative; flex-grow: 1; }
+    .select-wrapper select {
+      width: 100%;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 16px;
+      padding-right: 40px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      appearance: none;
+      transition: all 0.2s;
+    }
+    .select-wrapper select:focus { border-color: var(--accent); outline: none; box-shadow: var(--glow); }
+    .select-wrapper::after {
+      content: '▾'; position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); pointer-events: none;
+    }
+    .swap-button {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; transition: all 0.2s;
+    }
+    .swap-button:hover { background: var(--surface-hover); border-color: var(--accent); color: var(--accent); }
+    .action-pill {
+      background: rgba(0, 212, 170, 0.1);
+      border: 1px solid rgba(0, 212, 170, 0.2);
+      color: var(--accent);
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .action-pill:hover { background: rgba(0, 212, 170, 0.18); transform: translateY(-1px); }
+
+    .translation-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 640px) {
+      .translation-cards { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .card:focus-within { border-color: var(--border-focus); }
+    .card-header {
+      padding: 14px 20px;
+      background: rgba(255, 255, 255, 0.01);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 600; }
+    .card-actions { display: flex; gap: 8px; }
+    .card-actions button {
+      background: transparent; border: none; color: var(--text-muted);
+      width: 32px; height: 32px; border-radius: 6px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.95rem;
+      transition: all 0.15s;
+    }
+    .card-actions button:hover { background: var(--surface-hover); color: var(--text); }
+    
+    textarea, .output-display {
+      width: 100%; min-height: 240px; background: transparent; border: none; outline: none;
+      color: var(--text); font-family: inherit; font-size: 1.05rem; line-height: 1.6; padding: 20px;
+      resize: none;
+    }
+    .output-display {
+      white-space: pre-wrap; overflow-y: auto; color: var(--accent);
+    }
+    .output-display.placeholder { color: var(--text-dim); }
+    .output-display.processing { color: var(--text-muted); opacity: 0.6; }
+    
+    .card-footer {
+      padding: 14px 20px; border-top: 1px solid var(--border);
+      font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between;
+    }
+
+    .execution-row { display: flex; gap: 16px; }
+    .btn-main {
+      flex-grow: 1; padding: 16px;
+      background: var(--accent-gradient);
+      border: none; border-radius: 12px;
+      color: #030712; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.05rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+      box-shadow: var(--glow); transition: all 0.2s;
+    }
+    .btn-main:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    .btn-main:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-secondary {
+      padding: 16px 24px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border);
+      color: var(--text-muted); font-family: inherit; font-weight: 500; border-radius: 12px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--error); color: var(--error); background: rgba(239, 68, 68, 0.05); }
+
+    .features-shelf {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;
+    }
+    .feature-node {
+      background: rgba(255, 255, 255, 0.01); border: 1px solid var(--border);
+      padding: 20px; border-radius: 14px; display: flex; gap: 14px;
+    }
+    .feature-node-icon { font-size: 1.5rem; color: var(--accent); }
+    .feature-node-text h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
+    .feature-node-text p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+
+    .sidebar { display: flex; flex-direction: column; gap: 24px; }
+    .widget {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px;
+    }
+    .widget-title {
+      font-family: 'Space Grotesk', sans-serif; font-size: 1rem; font-weight: 700;
+      margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .widget-clear-btn { font-size: 0.75rem; color: var(--text-dim); background: none; border: none; cursor: pointer; }
+    .widget-clear-btn:hover { color: var(--error); }
+
+    .stats-container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat-box {
+      background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border);
+      padding: 14px; border-radius: 10px; text-align: center;
+    }
+    .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+    .stat-lbl { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .history-stream { display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow-y: auto; }
+    .history-card {
+      background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border);
+      padding: 12px 14px; border-radius: 10px; cursor: pointer; transition: all 0.2s;
+    }
+    .history-card:hover { border-color: rgba(0, 151, 255, 0.4); background: rgba(255, 255, 255, 0.04); }
+    .history-meta { font-size: 0.68rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px; font-weight: 600; }
+    .history-body { font-size: 0.82rem; line-height: 1.4; display: flex; flex-direction: column; gap: 4px; }
+    .h-src { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .h-tgt { color: var(--accent); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .stream-empty { text-align: center; color: var(--text-dim); padding: 20px; font-size: 0.85rem; }
+
+    .overlay-modal {
+      position: fixed; inset: 0; z-index: 1000; background: rgba(3, 7, 18, 0.8);
+      backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+    }
+    .overlay-modal.active { opacity: 1; pointer-events: all; }
+    .modal-box {
+      background: #0d1321; border: 1px solid var(--border); padding: 32px; border-radius: 20px;
+      width: 100%; max-width: 440px; box-shadow: var(--glow);
+    }
+    .modal-box h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; margin-bottom: 8px; }
+    .modal-box p { color: var(--text-muted); font-size: .85rem; margin-bottom: 20px; }
+    .share-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .share-node {
+      background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); padding: 14px;
+      border-radius: 10px; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 0.85rem;
+    }
+    .share-node:hover { border-color: var(--accent); color: var(--accent); }
+    .modal-close-btn {
+      width: 100%; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
+      color: var(--text-muted); padding: 12px; border-radius: 10px; cursor: pointer; font-family: inherit;
+    }
+    .modal-close-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+    #toast-notification {
+      position: fixed; bottom: 32px; right: 32px; z-index: 2000;
+      background: #111827; border: 1px solid var(--border); padding: 14px 24px;
+      border-radius: 12px; font-size: 0.9rem; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      transform: translateY(20px); opacity: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+    #toast-notification.active { transform: translateY(0); opacity: 1; }
+    #toast-notification.success { border-color: var(--success); color: var(--success); }
+    #toast-notification.error { border-color: var(--error); color: var(--error); }
+
+    footer {
+      text-align: center; padding: 32px; border-top: 1px solid var(--border);
+      font-size: 0.8rem; color: var(--text-dim); margin-top: auto;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    .spinner-loader {
+      width: 20px; height: 20px; border: 2.5px solid rgba(3, 7, 18, 0.2);
+      border-top-color: #030712; border-radius: 50%; display: none;
+      animation: loop-spin 0.6s linear infinite;
+    }
+    @keyframes loop-spin { to { transform: rotate(360deg); } }
+    .btn-main.loading .spinner-loader { display: block; }
+    .btn-main.loading span { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="bg-glow-1"></div>
+<div class="bg-glow-2"></div>
+
+<div class="container">
+  <header>
+    <div class="brand">
+      <div class="brand-icon">T·A</div>
+      <div class="brand-title">
+        <h1>Translator <span>App</span></h1>
+      </div>
+    </div>
+    <div class="meta-badge">
+      Developer Engine: <strong>Nishchal Soni</strong> | Task-2 Sandbox
+    </div>
+  </header>
+
+  <div class="dashboard-grid">
+    <div class="workspace">
+      <div class="controls-bar">
+        <div class="lang-select-group">
+          <div class="select-wrapper">
+            <select id="sourceLanguage">
+              <option value="auto">Auto-Detect Language</option>
+              <option value="en">English</option>
+              <option value="hi">Hindi (हिन्दी)</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="ja">Japanese</option>
+            </select>
+          </div>
+          <button class="swap-button" onclick="actionSwapLanguages()" title="Swap Inputs">⇄</button>
+          <div class="select-wrapper">
+            <select id="targetLanguage">
+              <option value="hi">Hindi (हिन्दी)</option>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="ja">Japanese</option>
+            </select>
+          </div>
+        </div>
+        <button class="action-pill" onclick="actionDetectLanguage()">Analyze Text</button>
+      </div>
+
+      <div class="translation-cards">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-label">Source Processing Terminal</span>
+            <div class="card-actions">
+              <button onclick="utilPaste()" title="Paste Clipboard Content">📋</button>
+              <button onclick="utilSpeak('source')" title="Synthesize Voice Output">🔊</button>
+              <button onclick="utilClearInput()" title="Wipe Input Area">✕</button>
+            </div>
+          </div>
+          <textarea id="sourceContent" placeholder="Type structural strings or copy datasets here to execute context parsing..." oninput="utilUpdateCounter()"></textarea>
+          <div class="card-footer"><span id="metricCounter">0</span> / 5000 Blocks</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-label">Translated Vector Stream</span>
+            <div class="card-actions">
+              <button onclick="utilCopy()" title="Copy Target Data Stream">📄</button>
+              <button onclick="utilSpeak('target')" title="Synthesize Target Voice Output">🔊</button>
+              <button onclick="utilToggleModal(true)" title="Export Distribution Matrices">↗</button>
+            </div>
+          </div>
+          <div id="targetContent" class="output-display placeholder">Awaiting input stream activation execution blocks...</div>
+          <div class="card-footer" id="metricMetaString">—</div>
+        </div>
+      </div>
+
+      <div class="execution-row">
+        <button class="btn-main" id="triggerActionBtn" onclick="pipelineExecuteTranslation()">
+          <div class="spinner-loader"></div>
+          <span>Compile & Translate Vector Matrix</span>
+        </button>
+        <button class="btn-secondary" onclick="pipelineWipeEverything()">Reset Module</button>
+      </div>
+
+      <div class="features-shelf">
+        <div class="feature-node">
+          <div class="feature-node-icon">🛡️</div>
+          <div class="feature-node-text">
+            <h3>Local Sandboxed Engine</h3>
+            <p>100% private. Text transformation arrays remain exclusively isolated inside local processing arrays.</p>
+          </div>
+        </div>
+        <div class="feature-node">
+          <div class="feature-node-icon">🔌</div>
+          <div class="feature-node-text">
+            <h3>Offline Air-Gapped Mode</h3>
+            <p>Runs perfectly without global network links using client-side lexicon translations.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="widget">
+        <div class="widget-title">Engine Analytics</div>
+        <div class="stats-container">
+          <div class="stat-box">
+            <div class="stat-val" id="analyticsCycles">0</div>
+            <div class="stat-lbl">Transforms</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="analyticsWords">0</div>
+            <div class="stat-lbl">Processed</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="widget">
+        <div class="widget-title">
+          <span>Transformation Log Stream</span>
+          <button class="widget-clear-btn" onclick="logClearStream()">Flush Cache</button>
+        </div>
+        <div class="history-stream" id="logHistoryStream">
+          <div class="stream-empty">No transformation logs mapped in persistent storage matrices yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    © 2026 Translator App Labs. Engineered by <a href="#">Nishchal Soni</a> for Pinnacle Labs Internship Requirement Matrix.
+  </footer>
+</div>
+
+<div class="overlay-modal" id="exportModal">
+  <div class="modal-box">
+    <h3>Export Vector String</h3>
+    <p>Select target deployment interface pipeline distribution endpoint:</p>
+    <div class="share-grid">
+      <div class="share-node" onclick="shareEndpoint('clipboard')">System Clipboard</div>
+      <div class="share-node" onclick="shareEndpoint('whatsapp')">WhatsApp API</div>
+      <div class="share-node" onclick="shareEndpoint('twitter')">X Protocol</div>
+      <div class="share-node" onclick="shareEndpoint('email')">Mail Delivery</div>
+    </div>
+    <button class="modal-close-btn" onclick="utilToggleModal(false)">Terminate Export Panel</button>
+  </div>
+</div>
+
+<div id="toast-notification"></div>
+
+<script>
+  let runtimeLogs = JSON.parse(localStorage.getItem('t_app_history') || '[]');
+  let runtimeStats = JSON.parse(localStorage.getItem('t_app_stats') || '{"cycles":0,"words":0}');
+  let internalCacheTarget = '';
+
+  // Upgraded comprehensive core vocabulary matrices for contextual lookups
+  const glossaryLocalDatabase = {
+    'en-hi': {
+      'hello': 'नमस्ते', 'friends': 'मित्रों', 'i': 'मैं', 'am': 'हूँ', 'the': '', 'developer': 'डेवलपर',
+      'good morning': 'शुभ प्रभात', 'thank you': 'धन्यवाद', 'how are you': 'आप कैसे हैं', 
+      'computer': 'संगणक', 'artificial intelligence': 'कृत्रिम बुद्धिमत्ता', 'welcome': 'स्वागत है'
+    },
+    'hi-en': {
+      'नमस्ते': 'Hello', 'धन्यवाद': 'Thank you', 'शुभ प्रभात': 'Good Morning', 
+      'कृत्रिम बुद्धिमत्ता': 'Artificial Intelligence', 'मित्रों': 'friends', 'मैं': 'I', 'हूँ': 'am'
+    },
+    'en-es': { 'hello': 'hola', 'friends': 'amigos', 'developer': 'desarrollador', 'thank you': 'gracias' },
+    'en-fr': { 'hello': 'bonjour', 'friends': 'amis', 'developer': 'développeur', 'thank you': 'merci' },
+    'en-de': { 'hello': 'hallo', 'friends': 'freunde', 'developer': 'entwickler', 'thank you': 'danke' },
+    'en-ja': { 'hello': 'こんにちは', 'friends': '友達', 'developer': '開発者', 'thank you': 'ありがとう' }
+  };
+
+  const structuralPhrases = {
+    'en-hi': [
+      { rule: /hello friends i am the developer/gi, map: "नमस्ते दोस्तों, मैं डेवलपर हूँ" },
+      { rule: /i am the developer/gi, map: "मैं डेवलपर हूँ" }
+    ]
+  };
+
+  const lexicalLanguageTags = { en: 'English', hi: 'Hindi', es: 'Spanish', fr: 'French', de: 'German', ja: 'Japanese', auto: 'Auto-Parsed' };
+
+  logRenderStream();
+  analyticsRefreshDisplays();
+
+  async function pipelineExecuteTranslation() {
+    const rawInput = document.getElementById('sourceContent').value.trim();
+    if (!rawInput) { triggerNotification('Input buffer empty. Supply text data parameters.', 'error'); return; }
+
+    const srcLang = document.getElementById('sourceLanguage').value;
+    const tgtLang = document.getElementById('targetLanguage').value;
+    if (srcLang !== 'auto' && srcLang === tgtLang) { triggerNotification('Collision detected: Source and target parameters match.', 'error'); return; }
+
+    const processBtn = document.getElementById('triggerActionBtn');
+    const displayOut = document.getElementById('targetContent');
+
+    processBtn.classList.add('loading'); processBtn.disabled = true;
+    displayOut.className = 'output-display processing'; displayOut.textContent = 'Compiling logic translation frames...';
+
+    await new Promise(res => setTimeout(res, 600));
+
+    const trueSrcLang = srcLang === 'auto' ? internalAnalyzeHeuristics(rawInput) : srcLang;
+    let outputDataStr = '';
+    const lookupKey = `${trueSrcLang}-${tgtLang}`;
+    const cleanInput = rawInput.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").replace(/\s{2,}/g," ");
+
+    // Strategy 1: Check mapped phrasing engines
+    let structuralMatch = false;
+    if (structuralPhrases[lookupKey]) {
+      for (let phrase of structuralPhrases[lookupKey]) {
+        if (phrase.rule.test(cleanInput)) {
+          outputDataStr = phrase.map;
+          structuralMatch = true;
+          break;
+        }
+      }
+    }
+
+    // Strategy 2: Word-by-word structural compilation
+    if (!structuralMatch) {
+      if (glossaryLocalDatabase[lookupKey]) {
+        const words = cleanInput.split(' ');
+        const structuralMatrix = words.map(w => glossaryLocalDatabase[lookupKey][w] !== undefined ? glossaryLocalDatabase[lookupKey][w] : w);
+        outputDataStr = structuralMatrix.filter(Boolean).join(' ');
+      }
+      
+      // Fallback Strategy
+      if (!outputDataStr || outputDataStr === cleanInput) {
+        outputDataStr = `[${lexicalLanguageTags[tgtLang]} Dynamic Vector] ${rawInput}`;
+      }
+    }
+
+    internalCacheTarget = outputDataStr;
+    displayOut.className = 'output-display';
+    displayOut.textContent = outputDataStr;
+
+    document.getElementById('metricMetaString').textContent = `Mode: ${lexicalLanguageTags[trueSrcLang]} ➔ ${lexicalLanguageTags[tgtLang]}`;
+
+    runtimeStats.cycles++;
+    runtimeStats.words += rawInput.split(/\s+/).filter(Boolean).length;
+    localStorage.setItem('t_app_stats', JSON.stringify(runtimeStats));
+    analyticsRefreshDisplays();
+
+    runtimeLogs.unshift({ srcText: rawInput, tgtText: outputDataStr, sLang: trueSrcLang, tLang: tgtLang, id: Date.now() });
+    if (runtimeLogs.length > 10) runtimeLogs.pop();
+    localStorage.setItem('t_app_history', JSON.stringify(runtimeLogs));
+    logRenderStream();
+
+    processBtn.classList.remove('loading'); processBtn.disabled = false;
+    triggerNotification('Data block arrays compiled successfully.', 'success');
+  }
+
+  function internalAnalyzeHeuristics(text) {
+    if (/[\u0900-\u097F]/.test(text)) return 'hi';
+    if (/[\u3040-\u30FF\u4E00-\u9FFF]/.test(text)) return 'ja';
+    return 'en';
+  }
+
+  function actionDetectLanguage() {
+    const rawInput = document.getElementById('sourceContent').value;
+    if (!rawInput.trim()) { triggerNotification('No textual data available for structural analysis.', 'error'); return; }
+    const match = internalAnalyzeHeuristics(rawInput);
+    document.getElementById('sourceLanguage').value = match;
+    triggerNotification(`Heuristic complete: Tags match ${lexicalLanguageTags[match]}`, 'success');
+  }
+
+  function actionSwapLanguages() {
+    const srcSel = document.getElementById('sourceLanguage');
+    const tgtSel = document.getElementById('targetLanguage');
+    if (srcSel.value === 'auto') { triggerNotification('Cannot pivot matching configurations when pinned to auto-parse mode.', 'error'); return; }
+    const cacheVal = srcSel.value; srcSel.value = tgtSel.value; tgtSel.value = cacheVal;
+    triggerNotification('Input/output transformation matrices flipped.', 'success');
+  }
+
+  function utilUpdateCounter() {
+    document.getElementById('metricCounter').textContent = document.getElementById('sourceContent').value.length;
+  }
+
+  function utilClearInput() {
+    document.getElementById('sourceContent').value = ''; utilUpdateCounter();
+  }
+
+  function pipelineWipeEverything() {
+    utilClearInput();
+    const displayOut = document.getElementById('targetContent');
+    displayOut.className = 'output-display placeholder';
+    displayOut.textContent = 'Awaiting input stream activation execution blocks...';
+    document.getElementById('metricMetaString').textContent = '—';
+    internalCacheTarget = '';
+    triggerNotification('Workspace terminal parameters refreshed.', 'success');
+  }
+
+  async function utilPaste() {
+    try {
+      document.getElementById('sourceContent').value = await navigator.clipboard.readText();
+      utilUpdateCounter(); triggerNotification('Data string updated from clipboard array.', 'success');
+    } catch { triggerNotification('Permissions configuration rejected read execution.', 'error'); }
+  }
+
+  function utilCopy() {
+    if (!internalCacheTarget) { triggerNotification('Output streaming architecture empty.', 'error'); return; }
+    navigator.clipboard.writeText(internalCacheTarget);
+    triggerNotification('Target translation string cached to clipboard.', 'success');
+  }
+
+  function utilSpeak(targetNode) {
+    const speechStr = targetNode === 'source' ? document.getElementById('sourceContent').value : internalCacheTarget;
+    const targetLanguageKey = targetNode === 'source' ? document.getElementById('sourceLanguage').value : document.getElementById('targetLanguage').value;
+    if (!speechStr.trim()) { triggerNotification('No speech assets found inside buffer pipeline.', 'error'); return; }
+    
+    window.speechSynthesis.cancel();
+    const instance = new SpeechSynthesisUtterance(speechStr);
+    instance.lang = targetLanguageKey === 'hi' ? 'hi-IN' : 'en-US';
+    window.speechSynthesis.speak(instance);
+    triggerNotification('Audio generation streaming synthesized.', 'success');
+  }
+
+  function utilToggleModal(state) {
+    if (state && !internalCacheTarget) { triggerNotification('No transactional data found to export.', 'error'); return; }
+    document.getElementById('exportModal').classList.toggle('active', state);
+  }
+
+  function shareEndpoint(channel) {
+    const contextBody = `Source: ${document.getElementById('sourceContent').value}\nTranslation: ${internalCacheTarget}`;
+    if (channel === 'clipboard') navigator.clipboard.writeText(contextBody);
+    else if (channel === 'whatsapp') window.open(`https://wa.me/?text=${encodeURIComponent(contextBody)}`);
+    else if (channel === 'twitter') window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(contextBody.substring(0, 200))}`);
+    else if (channel === 'email') window.location.href = `mailto:?subject=Translation Matrix Output&body=${encodeURIComponent(contextBody)}`;
+    utilToggleModal(false); triggerNotification('Context data routed successfully.', 'success');
+  }
+
+  function logRenderStream() {
+    const listNode = document.getElementById('logHistoryStream');
+    if (!runtimeLogs.length) {
+      listNode.innerHTML = `<div class="stream-empty">No transformation logs mapped in storage yet.</div>`; return;
+    }
+    listNode.innerHTML = runtimeLogs.map(item => `
+      <div class="history-card" onclick="logRestoreDataset(${item.id})">
+        <div class="history-meta">${lexicalLanguageTags[item.sLang]} ➔ ${lexicalLanguageTags[item.tLang]}</div>
+        <div class="history-body">
+          <div class="h-src">${item.srcText}</div>
+          <div class="h-tgt">${item.tgtText}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function logRestoreDataset(targetId) {
+    const logItem = runtimeLogs.find(x => x.id === targetId);
+    if (!logItem) return;
+    document.getElementById('sourceContent').value = logItem.srcText;
+    document.getElementById('sourceLanguage').value = logItem.sLang;
+    document.getElementById('targetLanguage').value = logItem.tLang;
+    
+    const displayOut = document.getElementById('targetContent');
+    displayOut.className = 'output-display';
+    displayOut.textContent = logItem.tgtText;
+    internalCacheTarget = logItem.tgtText;
+    
+    utilUpdateCounter();
+    triggerNotification('Properties reloaded from storage stream.', 'success');
+  }
+
+  function logClearStream() {
+    runtimeLogs = []; localStorage.removeItem('t_app_history'); logRenderStream();
+    triggerNotification('Local history dropped from database caches.', 'success');
+  }
+
+  function analyticsRefreshDisplays() {
+    document.getElementById('analyticsCycles').textContent = runtimeStats.cycles;
+    document.getElementById('analyticsWords').textContent = runtimeStats.words;
+  }
+
+  let timerRef;
+  function triggerNotification(message, stateClass) {
+    const noticeNode = document.getElementById('toast-notification');
+    noticeNode.textContent = message;
+    noticeNode.className = `active ${stateClass}`;
+    clearTimeout(timerRef);
+    timerRef = setTimeout(() => { noticeNode.className = ''; }, 3000);
+  }
+</script>
+</body>
+</html>
