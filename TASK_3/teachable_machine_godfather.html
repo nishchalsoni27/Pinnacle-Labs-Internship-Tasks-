@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teachable Machine — The Don's Algorithm</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=IM+Fell+English:ital@0;1&family=Crimson+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #0a0804;
+    --deep: #111008;
+    --dark: #1a1510;
+    --card: #1f1a12;
+    --card2: #271f14;
+    --border: #3a2f1e;
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --gold-dim: #7a6030;
+    --cream: #f0e6c8;
+    --cream2: #d9c89a;
+    --red: #8b1a1a;
+    --red2: #a52020;
+    --muted: #6e5f42;
+    --text: #ddd0b0;
+    --accent: #c9a84c;
+  }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 17px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    text-align: center;
+    padding: 56px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .rose-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .rose-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--gold-dim)); max-width: 120px; }
+  .rose-line.right { background: linear-gradient(to left, transparent, var(--gold-dim)); }
+  .rose-symbol { color: var(--gold); font-size: 20px; letter-spacing: 6px; }
+
+  header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    font-weight: 700;
+    color: var(--cream);
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    text-shadow: 0 2px 40px rgba(201,168,76,0.2);
+    margin-bottom: 10px;
+  }
+
+  header h1 span {
+    color: var(--gold);
+    font-style: italic;
+  }
+
+  .subtitle {
+    font-family: 'IM Fell English', serif;
+    font-style: italic;
+    color: var(--muted);
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    margin-top: 6px;
+  }
+
+  .byline {
+    margin-top: 14px;
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    font-family: 'Crimson Pro', serif;
+  }
+
+  /* ── SECTION TITLE ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+    margin-top: 44px;
+  }
+  .section-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    color: var(--gold-dim);
+    font-weight: 700;
+    line-height: 1;
+    min-width: 32px;
+  }
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    color: var(--cream);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .section-rule { flex: 1; height: 1px; background: var(--border); }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.25s;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    opacity: 0.5;
+  }
+  .card:hover { border-color: var(--gold-dim); }
+
+  /* ── FORM ELEMENTS ── */
+  label {
+    display: block;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.82rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  select,
+  textarea {
+    width: 100%;
+    background: var(--deep);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--cream);
+    font-family: 'Crimson Pro', serif;
+    font-size: 1rem;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 0 3px rgba(201,168,76,0.08);
+  }
+  input::placeholder, textarea::placeholder { color: var(--muted); font-style: italic; }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a6030'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+  select option { background: var(--card); }
+
+  textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+
+  /* ── RANGE SLIDER ── */
+  .slider-row { display: flex; align-items: center; gap: 14px; }
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: 2px solid var(--black);
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(201,168,76,0.4);
+    transition: transform 0.15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  .slider-val {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    color: var(--gold);
+    min-width: 40px;
+    text-align: right;
+    font-weight: 600;
+  }
+
+  /* ── RADIO / CHECKBOX ── */
+  .radio-group, .check-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .radio-pill, .check-pill {
+    position: relative;
+  }
+  .radio-pill input, .check-pill input {
+    position: absolute;
+    opacity: 0;
+    width: 0; height: 0;
+  }
+  .radio-pill label, .check-pill label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    background: var(--deep);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    transition: all 0.2s;
+    text-transform: uppercase;
+    font-family: 'Crimson Pro', serif;
+    font-weight: 400;
+    margin-bottom: 0;
+  }
+  .radio-pill input:checked + label,
+  .check-pill input:checked + label {
+    border-color: var(--gold-dim);
+    background: rgba(201,168,76,0.07);
+    color: var(--gold-light);
+  }
+  .radio-pill label:hover, .check-pill label:hover {
+    border-color: var(--gold-dim);
+    color: var(--cream2);
+  }
+
+  /* ── TOGGLE SWITCH ── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-label-text { font-size: 0.95rem; color: var(--text); }
+  .toggle-switch { position: relative; width: 44px; height: 24px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.25s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    top: 3px; left: 3px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform 0.25s, background 0.25s;
+  }
+  .toggle-switch input:checked ~ .toggle-track { background: rgba(201,168,76,0.25); }
+  .toggle-switch input:checked ~ .toggle-track::after { transform: translateX(20px); background: var(--gold); }
+
+  /* ── PROGRESS BARS ── */
+  .progress-item { margin-bottom: 16px; }
+  .progress-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+  .progress-name { font-size: 0.85rem; color: var(--cream2); letter-spacing: 0.05em; }
+  .progress-pct { font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: var(--gold); font-weight: 600; }
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    border-radius: 2px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.82rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 13px 28px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+  .btn-primary {
+    background: var(--gold);
+    color: var(--black);
+    border: 1px solid var(--gold);
+  }
+  .btn-primary:hover { background: var(--gold-light); border-color: var(--gold-light); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--gold-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .btn-danger {
+    background: transparent;
+    color: var(--red2);
+    border: 1px solid #4a1a1a;
+  }
+  .btn-danger:hover { background: rgba(139,26,26,0.1); border-color: var(--red2); }
+
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+
+  /* ── GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media(max-width: 560px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* ── RESULT OUTPUT ── */
+  #result-box {
+    background: var(--deep);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold-dim);
+    border-radius: 2px;
+    padding: 20px 24px;
+    margin-top: 20px;
+    display: none;
+    animation: fadeIn 0.4s ease;
+  }
+  #result-box.show { display: block; }
+  .result-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.15rem;
+    color: var(--gold);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+  }
+  .result-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+  .result-line:last-child { border-bottom: none; }
+  .result-key { color: var(--muted); letter-spacing: 0.05em; }
+  .result-val { color: var(--cream2); font-weight: 600; }
+
+  /* ── FILE UPLOAD ── */
+  .upload-zone {
+    border: 1px dashed var(--gold-dim);
+    border-radius: 3px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(201,168,76,0.02);
+  }
+  .upload-zone:hover { border-color: var(--gold); background: rgba(201,168,76,0.05); }
+  .upload-zone input { display: none; }
+  .upload-icon { font-size: 2rem; color: var(--gold-dim); margin-bottom: 10px; }
+  .upload-text { font-size: 0.9rem; color: var(--muted); font-style: italic; }
+  .upload-filename { color: var(--gold); font-weight: 600; margin-top: 8px; font-size: 0.9rem; }
+
+  /* ── STEP INDICATOR ── */
+  .steps {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .step-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--muted);
+    transition: all 0.25s;
+    background: var(--deep);
+  }
+  .step.active .step-num { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.1); }
+  .step.done .step-num { border-color: var(--gold-dim); background: var(--gold-dim); color: var(--black); }
+  .step-label { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .step.active .step-label { color: var(--cream2); }
+  .step-connector { width: 36px; height: 1px; background: var(--border); margin: 0 4px; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .tab {
+    font-family: 'Crimson Pro', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    margin-bottom: -1px;
+  }
+  .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .tab:hover:not(.active) { color: var(--cream2); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadeIn 0.3s ease; }
+
+  /* ── STATUS BADGE ── */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .badge-gold { background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid var(--gold-dim); }
+  .badge-red { background: rgba(139,26,26,0.15); color: #c87070; border: 1px solid #4a1a1a; }
+  .badge-green { background: rgba(30,80,40,0.2); color: #7ab87a; border: 1px solid #2a4a2a; }
+
+  /* ── NOTIFICATION ── */
+  .notification {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: var(--card2);
+    border: 1px solid var(--gold-dim);
+    border-left: 3px solid var(--gold);
+    padding: 14px 20px;
+    border-radius: 2px;
+    font-size: 0.9rem;
+    color: var(--cream2);
+    z-index: 100;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 280px;
+  }
+  .notification.show { transform: translateY(0); opacity: 1; }
+  .notif-title { font-family: 'Cormorant Garamond', serif; color: var(--gold); font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+
+  /* ── TRAINING LOG ── */
+  #training-log {
+    background: var(--deep);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: var(--muted);
+    max-height: 160px;
+    overflow-y: auto;
+    display: none;
+  }
+  .log-line { padding: 2px 0; }
+  .log-line.gold { color: var(--gold); }
+  .log-line.green { color: #7ab87a; }
+  .log-line.red { color: #c87070; }
+
+  /* ── EPOCH BAR ── */
+  .epoch-visual {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    margin: 16px 0;
+  }
+  .epoch-cell {
+    height: 28px;
+    background: var(--border);
+    border-radius: 2px;
+    transition: background 0.3s;
+    position: relative;
+  }
+  .epoch-cell.trained { background: var(--gold-dim); }
+  .epoch-cell.current { background: var(--gold); }
+
+  /* ── QUOTE ── */
+  blockquote {
+    border-left: 2px solid var(--gold-dim);
+    padding: 12px 20px;
+    margin: 20px 0 0;
+    font-family: 'IM Fell English', serif;
+    font-style: italic;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+  blockquote cite { display: block; margin-top: 8px; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-dim); font-style: normal; }
+
+  /* ── RESPONSIVE ── */
+  @media(max-width: 600px) {
+    .card { padding: 20px 18px; }
+    .btn-row { flex-direction: column; }
+    .btn { width: 100%; text-align: center; }
+    .steps { gap: 4px; }
+    .step-connector { width: 16px; }
+    .step-label { display: none; }
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .pulse { animation: pulse 1.5s infinite; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--deep); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 32px 0 0;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    font-family: 'Crimson Pro', serif;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <header>
+    <div class="rose-divider">
+      <div class="rose-line"></div>
+      <div class="rose-symbol">✦ ✦ ✦</div>
+      <div class="rose-line right"></div>
+    </div>
+    <h1>The <span>Teachable</span> Machine</h1>
+    <p class="subtitle">An offer your data cannot refuse</p>
+    <p class="byline">Crafted by Nishchal Soni &nbsp;·&nbsp; Offline · No API</p>
+    <blockquote>
+      "A man who doesn't spend time with his data has no right to call himself a machine learning scientist."
+      <cite>— Nishchal Soni</cite>
+    </blockquote>
+  </header>
+
+  <div class="steps" id="steps">
+    <div class="step active" data-step="1" onclick="goStep(1)">
+      <div class="step-num">I</div>
+      <div class="step-label">Configure</div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step" data-step="2" onclick="goStep(2)">
+      <div class="step-num">II</div>
+      <div class="step-label">Train</div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step" data-step="3" onclick="goStep(3)">
+      <div class="step-num">III</div>
+      <div class="step-label">Classify</div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step" data-step="4" onclick="goStep(4)">
+      <div class="step-num">IV</div>
+      <div class="step-label">Results</div>
+    </div>
+  </div>
+
+  <section id="step1">
+
+    <div class="section-header">
+      <div class="section-num">I.</div>
+      <div class="section-title">The Model's Proposal</div>
+      <div class="section-rule"></div>
+    </div>
+
+    <div class="card">
+      <div class="grid-2">
+        <div>
+          <label for="model-name">Model Name</label>
+          <input type="text" id="model-name" placeholder="e.g. Don's Image Classifier" />
+        </div>
+        <div>
+          <label for="task-type">Task Type</label>
+          <select id="task-type">
+            <option value="image">Image Classification</option>
+            <option value="text">Text Classification</option>
+            <option value="audio">Audio Recognition</option>
+            <option value="pose">Pose Detection</option>
+            <option value="tabular">Tabular Data</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top: 18px;">
+        <label for="description">Model Description</label>
+        <textarea id="description" placeholder="Describe what this machine shall learn to recognize..."></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Architecture</label>
+      <div class="radio-group">
+        <div class="radio-pill">
+          <input type="radio" name="arch" id="arch-mobilenet" value="mobilenet" checked>
+          <label for="arch-mobilenet">MobileNet</label>
+        </div>
+        <div class="radio-pill">
+          <input type="radio" name="arch" id="arch-resnet" value="resnet">
+          <label for="arch-resnet">ResNet-50</label>
+        </div>
+        <div class="radio-pill">
+          <input type="radio" name="arch" id="arch-efficientnet" value="efficientnet">
+          <label for="arch-efficientnet">EfficientNet</label>
+        </div>
+        <div class="radio-pill">
+          <input type="radio" name="arch" id="arch-custom" value="custom">
+          <label for="arch-custom">Custom CNN</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Active Features</label>
+      <div style="margin-top: 8px;">
+        <div class="toggle-row">
+          <span class="toggle-label-text">Data Augmentation</span>
+          <label class="toggle-switch"><input type="checkbox" id="t1" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label-text">Transfer Learning</span>
+          <label class="toggle-switch"><input type="checkbox" id="t2" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label-text">Early Stopping</span>
+          <label class="toggle-switch"><input type="checkbox" id="t3"><span class="toggle-track"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label-text">Batch Normalization</span>
+          <label class="toggle-switch"><input type="checkbox" id="t4" checked><span class="toggle-track"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="nextStep()">Continue to Training &rarr;</button>
+      <button class="btn btn-ghost" onclick="resetForm()">Reset All</button>
+    </div>
+  </section>
+
+  <section id="step2" style="display:none;">
+
+    <div class="section-header">
+      <div class="section-num">II.</div>
+      <div class="section-title">The Training Grounds</div>
+      <div class="section-rule"></div>
+    </div>
+
+    <div class="card">
+      <label>Class Labels</label>
+      <div id="class-list"></div>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <input type="text" id="new-class" placeholder="Add a new class..." style="flex:1;" />
+        <button class="btn btn-ghost" onclick="addClass()" style="white-space:nowrap;">+ Add Class</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this,'hyper')">Hyperparameters</button>
+        <button class="tab" onclick="switchTab(this,'data')">Data Settings</button>
+        <button class="tab" onclick="switchTab(this,'optim')">Optimizer</button>
+      </div>
+
+      <div id="tab-hyper" class="tab-panel active">
+        <div style="margin-bottom:22px;">
+          <label>Learning Rate <span id="lr-val" style="color:var(--gold); font-family:'Cormorant Garamond',serif;">0.001</span></label>
+          <div class="slider-row">
+            <input type="range" id="lr" min="1" max="100" value="10" oninput="updateLR(this.value)">
+          </div>
+        </div>
+        <div style="margin-bottom:22px;">
+          <label>Epochs <span id="epoch-val" style="color:var(--gold); font-family:'Cormorant Garamond',serif;">20</span></label>
+          <div class="slider-row">
+            <input type="range" id="epochs" min="1" max="100" value="20" oninput="document.getElementById('epoch-val').textContent=this.value">
+          </div>
+        </div>
+        <div>
+          <label>Batch Size</label>
+          <div class="radio-group">
+            <div class="radio-pill"><input type="radio" name="batch" id="b8" value="8"><label for="b8">8</label></div>
+            <div class="radio-pill"><input type="radio" name="batch" id="b16" value="16" checked><label for="b16">16</label></div>
+            <div class="radio-pill"><input type="radio" name="batch" id="b32" value="32"><label for="b32">32</label></div>
+            <div class="radio-pill"><input type="radio" name="batch" id="b64" value="64"><label for="b64">64</label></div>
+            <div class="radio-pill"><input type="radio" name="batch" id="b128" value="128"><label for="b128">128</label></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-data" class="tab-panel">
+        <div class="grid-2" style="gap:20px;">
+          <div>
+            <label>Train / Val Split (%)</label>
+            <input type="number" id="split" value="80" min="50" max="95" placeholder="80" />
+          </div>
+          <div>
+            <label>Input Image Size</label>
+            <select id="img-size">
+              <option>128 × 128</option>
+              <option selected>224 × 224</option>
+              <option>299 × 299</option>
+              <option>512 × 512</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:18px;">
+          <label>Augmentation Intensity</label>
+          <div class="slider-row">
+            <input type="range" id="augment" min="0" max="100" value="40" oninput="document.getElementById('aug-val').textContent=this.value+'%'">
+            <span class="slider-val" id="aug-val">40%</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-optim" class="tab-panel">
+        <div style="margin-bottom:18px;">
+          <label>Optimizer</label>
+          <div class="radio-group">
+            <div class="radio-pill"><input type="radio" name="optim" id="o-adam" value="adam" checked><label for="o-adam">Adam</label></div>
+            <div class="radio-pill"><input type="radio" name="optim" id="o-sgd" value="sgd"><label for="o-sgd">SGD</label></div>
+            <div class="radio-pill"><input type="radio" name="optim" id="o-rmsprop" value="rmsprop"><label for="o-rmsprop">RMSProp</label></div>
+            <div class="radio-pill"><input type="radio" name="optim" id="o-adagrad" value="adagrad"><label for="o-adagrad">Adagrad</label></div>
+          </div>
+        </div>
+        <div>
+          <label>Weight Decay</label>
+          <div class="slider-row">
+            <input type="range" id="wd" min="0" max="100" value="5" oninput="document.getElementById('wd-val').textContent=(this.value/10000).toFixed(4)">
+            <span class="slider-val" id="wd-val">0.0005</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Training Data Upload</label>
+      <div class="upload-zone" onclick="document.getElementById('file-upload').click()">
+        <div class="upload-icon">⬆</div>
+        <div class="upload-text">Drop your dataset here, or click to summon it</div>
+        <div class="upload-filename" id="upload-name" style="display:none;"></div>
+        <input type="file" id="file-upload" accept=".zip,.csv,.json,.tar" onchange="handleUpload(this)">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="train-btn" onclick="startTraining()">Begin Training</button>
+      <button class="btn btn-ghost" onclick="prevStep()">← Back</button>
+    </div>
+
+    <div id="epoch-visual-wrap" style="display:none; margin-top:24px;">
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <label style="margin:0;">Training Progress</label>
+          <span class="badge badge-gold pulse" id="status-badge">Training...</span>
+        </div>
+        <div class="epoch-visual" id="epoch-cells"></div>
+        <div id="training-log"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="step3" style="display:none;">
+
+    <div class="section-header">
+      <div class="section-num">III.</div>
+      <div class="section-title">Make Your Prediction</div>
+      <div class="section-rule"></div>
+    </div>
+
+    <div class="card">
+      <div style="margin-bottom:20px;">
+        <label for="input-text">Input Sample</label>
+        <textarea id="input-text" placeholder="Describe your input data, or paste raw text for classification..." style="min-height:120px;"></textarea>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label for="confidence-thresh">Confidence Threshold</label>
+          <div class="slider-row" style="margin-top:4px;">
+            <input type="range" id="confidence-thresh" min="0" max="100" value="70" oninput="document.getElementById('conf-val').textContent=this.value+'%'">
+            <span class="slider-val" id="conf-val">70%</span>
+          </div>
+        </div>
+        <div>
+          <label for="top-k">Top-K Predictions</label>
+          <select id="top-k">
+            <option value="1">Top 1</option>
+            <option value="3" selected>Top 3</option>
+            <option value="5">Top 5</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:18px;">
+        <label>Post-processing</label>
+        <div class="check-group">
+          <div class="check-pill"><input type="checkbox" id="c-softmax" checked><label for="c-softmax">Softmax</label></div>
+          <div class="check-pill"><input type="checkbox" id="c-normalize"><label for="c-normalize">Normalize</label></div>
+          <div class="check-pill"><input type="checkbox" id="c-explain" checked><label for="c-explain">Explainability</label></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="classify()">Run Classification</button>
+      <button class="btn btn-ghost" onclick="prevStep()">← Back</button>
+    </div>
+
+    <div id="result-box">
+      <div class="result-title">The Oracle Speaks</div>
+      <div id="result-content"></div>
+    </div>
+  </section>
+
+  <section id="step4" style="display:none;">
+
+    <div class="section-header">
+      <div class="section-num">IV.</div>
+      <div class="section-title">The Family's Performance</div>
+      <div class="section-rule"></div>
+    </div>
+
+    <div class="card">
+      <div class="grid-2" style="gap:14px; margin-bottom:24px;">
+        <div style="background:var(--deep); border:1px solid var(--border); border-radius:2px; padding:18px; text-align:center;">
+          <div style="font-size:0.75rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Accuracy</div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:2.2rem; color:var(--gold); font-weight:700;" id="acc-val">—</div>
+        </div>
+        <div style="background:var(--deep); border:1px solid var(--border); border-radius:2px; padding:18px; text-align:center;">
+          <div style="font-size:0.75rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Val Loss</div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:2.2rem; color:var(--gold); font-weight:700;" id="loss-val">—</div>
+        </div>
+        <div style="background:var(--deep); border:1px solid var(--border); border-radius:2px; padding:18px; text-align:center;">
+          <div style="font-size:0.75rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">F1 Score</div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:2.2rem; color:var(--gold); font-weight:700;" id="f1-val">—</div>
+        </div>
+        <div style="background:var(--deep); border:1px solid var(--border); border-radius:2px; padding:18px; text-align:center;">
+          <div style="font-size:0.75rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Parameters</div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:2.2rem; color:var(--gold); font-weight:700;" id="param-val">—</div>
+        </div>
+      </div>
+
+      <label style="margin-bottom:16px; display:block;">Per-Class Performance</label>
+      <div id="class-perf"></div>
+    </div>
+
+    <div class="card">
+      <label style="margin-bottom:16px; display:block;">Export the Model</label>
+      <div class="check-group" style="margin-bottom:20px;">
+        <div class="check-pill"><input type="checkbox" id="exp-tf" checked><label for="exp-tf">TensorFlow.js</label></div>
+        <div class="check-pill"><input type="checkbox" id="exp-onnx"><label for="exp-onnx">ONNX</label></div>
+        <div class="check-pill"><input type="checkbox" id="exp-tflite" checked><label for="exp-tflite">TFLite</label></div>
+        <div class="check-pill"><input type="checkbox" id="exp-json"><label for="exp-json">JSON Weights</label></div>
+      </div>
+      <div class="btn-row" style="margin-top:0;">
+        <button class="btn btn-primary" onclick="exportModel()">Export Model</button>
+        <button class="btn btn-ghost" onclick="startOver()">Start Over</button>
+        <button class="btn btn-danger" onclick="deleteModel()">Delete All</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="notification" id="notif">
+  <div class="notif-title" id="notif-title">Done</div>
+  <div id="notif-body"></div>
+</div>
+
+<div class="wrapper">
+  <footer>
+    Made with honor &nbsp;·&nbsp; Nishchal Soni &nbsp;·&nbsp; Offline &nbsp;·&nbsp; No API &nbsp;·&nbsp; 2025
+  </footer>
+</div>
+
+<script>
+// ── STATE ──
+let currentStep = 1;
+let classes = ['Class I — The Don', 'Class II — The Consigliere'];
+let trained = false;
+
+// ── NAVIGATION ──
+function goStep(n) {
+  if (n > 1 && !trained && n > 2) return;
+  document.getElementById('step'+currentStep).style.display = 'none';
+  currentStep = n;
+  document.getElementById('step'+n).style.display = 'block';
+  document.querySelectorAll('.step').forEach(s => {
+    s.classList.remove('active');
+    if (parseInt(s.dataset.step) === n) s.classList.add('active');
+    if (parseInt(s.dataset.step) < n) s.classList.add('done');
+    else s.classList.remove('done');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function nextStep() {
+  if (currentStep < 4) {
+    if (currentStep === 2 && !trained) { showNotif('You must train the model first, my friend.', 'Patience'); return; }
+    goStep(currentStep + 1);
+  }
+}
+function prevStep() { if (currentStep > 1) goStep(currentStep - 1); }
+
+// ── CLASSES ──
+function renderClasses() {
+  const el = document.getElementById('class-list');
+  el.innerHTML = '';
+  classes.forEach((c, i) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);';
+    div.innerHTML = `
+      <span style="font-family:'Cormorant Garamond',serif;color:var(--gold-dim);min-width:24px;font-size:1.1rem;">${i+1}.</span>
+      <input type="text" value="${c}" onchange="classes[${i}]=this.value" style="flex:1;padding:8px 12px;">
+      <button onclick="removeClass(${i})" style="background:none;border:1px solid #4a1a1a;color:#c87070;padding:6px 12px;cursor:pointer;font-family:'Crimson Pro',serif;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:2px;" ${classes.length<=2?'disabled':''}>✕</button>
+    `;
+    el.appendChild(div);
+  });
+}
+function addClass() {
+  const v = document.getElementById('new-class').value.trim();
+  if (!v) return;
+  classes.push(v);
+  document.getElementById('new-class').value = '';
+  renderClasses();
+}
+function removeClass(i) {
+  if (classes.length <= 2) return;
+  classes.splice(i, 1);
+  renderClasses();
+}
+
+// ── LEARNING RATE ──
+function updateLR(v) {
+  const lrValues = [0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005, 0.00001, 0.000001];
+  const idx = Math.floor((v / 100) * (lrValues.length - 1));
+  document.getElementById('lr-val').textContent = lrValues[idx].toFixed(idx >= 5 ? 5 : 3);
+}
+
+// ── TABS ──
+function switchTab(btn, id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+// ── UPLOAD ──
+function handleUpload(input) {
+  if (input.files[0]) {
+    const name = input.files[0].name;
+    document.getElementById('upload-name').textContent = '✓ ' + name;
+    document.getElementById('upload-name').style.display = 'block';
+    showNotif('Dataset received. The family thanks you.', 'Upload Complete');
+  }
+}
+
+// ── TRAINING ──
+function startTraining() {
+  const wrap = document.getElementById('epoch-visual-wrap');
+  const log = document.getElementById('training-log');
+  const cells = document.getElementById('epoch-cells');
+  const totalEpochs = parseInt(document.getElementById('epochs').value);
+
+  wrap.style.display = 'block';
+  log.style.display = 'block';
+  log.innerHTML = '';
+  cells.innerHTML = '';
+
+  for (let i = 0; i < 10; i++) {
+    const c = document.createElement('div');
+    c.className = 'epoch-cell';
+    c.id = 'cell-'+i;
+    cells.appendChild(c);
+  }
+
+  document.getElementById('train-btn').disabled = true;
+  document.getElementById('train-btn').textContent = 'Training in progress...';
+
+  let e = 0;
+  const epochsPerCell = Math.ceil(totalEpochs / 10);
+  const epochInterval = setInterval(() => {
+    if (e >= totalEpochs) {
+      clearInterval(epochInterval);
+      finishTraining();
+      return;
+    }
+    const cellIdx = Math.floor(e / epochsPerCell);
+    if (cellIdx < 10) {
+      document.getElementById('cell-'+cellIdx).className = 'epoch-cell current';
+      if (cellIdx > 0) document.getElementById('cell-'+(cellIdx-1)).className = 'epoch-cell trained';
+    }
+    const loss = (2.8 - (e / totalEpochs) * 2.3 + (Math.random() * 0.2 - 0.1)).toFixed(4);
+    const acc = Math.min(99.9, 30 + (e / totalEpochs) * 65 + Math.random() * 3).toFixed(1);
+    addLog(`Epoch ${e+1}/${totalEpochs}  loss: ${loss}  acc: ${acc}%`, e === totalEpochs-1 ? 'green' : '');
+    e++;
+  }, 200);
+}
+
+function addLog(text, cls) {
+  const log = document.getElementById('training-log');
+  const line = document.createElement('div');
+  line.className = 'log-line' + (cls ? ' '+cls : '');
+  line.textContent = '> ' + text;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function finishTraining() {
+  for (let i = 0; i < 10; i++) document.getElementById('cell-'+i).className = 'epoch-cell trained';
+  addLog('Training complete. The model has made its decision.', 'gold');
+  document.getElementById('status-badge').textContent = 'Complete';
+  document.getElementById('status-badge').className = 'badge badge-green';
+  document.getElementById('train-btn').disabled = false;
+  document.getElementById('train-btn').textContent = 'Re-Train';
+  trained = true;
+
+  // Fill results data
+  const acc = (91 + Math.random()*6).toFixed(1)+'%';
+  const loss = (0.15 + Math.random()*0.1).toFixed(4);
+  const f1 = (0.88 + Math.random()*0.08).toFixed(3);
+  document.getElementById('acc-val').textContent = acc;
+  document.getElementById('loss-val').textContent = loss;
+  document.getElementById('f1-val').textContent = f1;
+  document.getElementById('param-val').textContent = '4.2M';
+  renderClassPerf();
+  showNotif('The model is ready to make offers.', 'Training Complete');
+}
+
+function renderClassPerf() {
+  const el = document.getElementById('class-perf');
+  el.innerHTML = '';
+  classes.forEach(c => {
+    const pct = Math.floor(78 + Math.random()*20);
+    el.innerHTML += `
+      <div class="progress-item">
+        <div class="progress-meta">
+          <span class="progress-name">${c}</span>
+          <span class="progress-pct">${pct}%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>`;
+  });
+}
+
+// ── CLASSIFY ──
+function classify() {
+  const text = document.getElementById('input-text').value.trim();
+  if (!text) { showNotif('You must provide an offer... I mean input.', 'Wait'); return; }
+
+  const box = document.getElementById('result-box');
+  const content = document.getElementById('result-content');
+  const topK = parseInt(document.getElementById('top-k').value);
+  const threshold = parseInt(document.getElementById('confidence-thresh').value);
+
+  const results = classes.slice(0, topK).map((c, i) => ({
+    label: c,
+    score: Math.max(threshold/100, Math.random() * (1-i*0.2)).toFixed(3)
+  })).sort((a,b) => b.score-a.score);
+
+  content.innerHTML = results.map((r, i) => `
+    <div class="result-line">
+      <span class="result-key">${i===0?'★ ':''}${r.label}</span>
+      <span class="result-val">${Math.round(r.score*100)}% <span style="color:var(--muted);font-size:0.85em;">${r.score}</span></span>
+    </div>
+  `).join('');
+
+  box.classList.add('show');
+  goStep(4);
+  showNotif('The oracle has spoken. Prediction delivered.', 'Classified');
+}
+
+// ── EXPORT ──
+function exportModel() {
+  const formats = [];
+  if (document.getElementById('exp-tf').checked) formats.push('TensorFlow.js');
+  if (document.getElementById('exp-onnx').checked) formats.push('ONNX');
+  if (document.getElementById('exp-tflite').checked) formats.push('TFLite');
+  if (document.getElementById('exp-json').checked) formats.push('JSON Weights');
+  if (!formats.length) { showNotif('Select at least one format.', 'Choose'); return; }
+  showNotif('Exporting: ' + formats.join(', '), 'The Don Approves');
+}
+
+function deleteModel() {
+  if (confirm('Delete all training data and the model? This cannot be undone.')) {
+    trained = false;
+    classes = ['Class I — The Don', 'Class II — The Consigliere'];
+    renderClasses();
+    goStep(1);
+    showNotif('Everything has been cleaned. Capisce?', 'Wiped');
+  }
+}
+
+// ── RESTARTS ──
+function startOver() {
+  trained = false;
+  goStep(1);
+}
+
+function resetForm() {
+  document.getElementById('model-name').value = '';
+  document.getElementById('description').value = '';
+  document.getElementById('task-type').selectedIndex = 0;
+  showNotif('The slate is clean.', 'Reset');
+}
+
+// ── NOTIFICATIONS ──
+function showNotif(msg, title) {
+  const n = document.getElementById('notif');
+  document.getElementById('notif-title').textContent = title || 'Notice';
+  document.getElementById('notif-body').textContent = msg;
+  n.classList.add('show');
+  setTimeout(() => n.classList.remove('show'), 3000);
+}
+
+// ── INIT ──
+renderClasses();
+</script>
+</body>
+</html>
