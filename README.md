@@ -35,7 +35,7 @@ This internship focuses on building practical, real-world **Artificial Intellige
 * **Tech Stack:** *(e.g., Python, Streamlit, Hugging Face Transformers, Google Translate API)*
 
 ### Task 3: Teachable Machine
-* **Directory:** `TASK_3/` *(Coming Soon)*
+* **Directory:** `TASK_3/` 
 * **Description:** An interactive AI application that recognizes and learns dynamically from user-provided data (such as images, sounds, or poses).
 * **Objective:** Create an adaptable, user-friendly platform for custom machine learning classification tasks.
 * **Tech Stack:** *(e.g., TensorFlow.js, OpenCV, Keras)*
