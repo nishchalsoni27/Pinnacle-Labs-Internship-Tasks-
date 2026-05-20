@@ -48,4 +48,4 @@ To explore or run any of these tasks locally, follow these steps:
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/nishchalsoni27/Pinnacle-Labs-Internship-Tasks.git](https://github.com/nishchalsoni27/Pinnacle-Labs-Internship-Tasks.git)
+   git clone [https://github.com/nishchalsoni27/Pinnacle-Labs-Internship-Tasks-](https://github.com/nishchalsoni27/Pinnacle-Labs-Internship-Tasks-)
